@@ -9,37 +9,58 @@ import cv2 as cv
 import numpy as np
 import math
 
+
 # 计算两点间距离
-def distanceOF2points(point1,point2):
+def distanceOF2points(point1, point2):
     x = point1[0] - point2[0]
     y = point1[1] - point2[1]
     dis = math.pow(x, 2) + math.pow(y, 2)
     dis = math.pow(dis, 0.5)
     return dis
 
+
 # 处理点列表
 def processPointList(pointList, w):
-    print("processPointList")
+    # print("processPointList")
+    # 先筛选并删除 y 值相差过远的元素
+    y_sum = 0
+    for point in pointList:
+        y_sum += point[1]
+    # y_average = 0.0
+    # if len(point) != 0:
+    #     y_average = y_sum/len(point)
+
     print("搜索到一共：" + str(len(pointList)) + " 个点, 控制距离为： " + str(w))
     temList_a = pointList
     temList_a.sort()
     temList_b = pointList
     temList_b.sort()
     result_List = []
-    for i, point_a in enumerate(temList_a):
-        for j, point_b in enumerate(temList_b):
+    i = 0
+    j = 0
+    while i < len(temList_a):
+        while j < len(temList_b):
             if j == 0:
-                print("hello")
-
-    result_List = []
+                result_List.append(temList_b[j])
+                j += 1
+                continue
+            # if temList_b[1] > y_average
+            if distanceOF2points(temList_a[i], temList_b[j]) > w:
+                print(distanceOF2points(temList_a[i], temList_b[j]))
+                result_List.append(temList_b[j])
+                i = j
+            j += 1
+        i += 1
     return result_List
 
+
 # gamma变换
-def adjust_gamma(src,gamma=0.25):
+def adjust_gamma(src, gamma=0.25):
     scale = float(np.iinfo(src.dtype).max - np.iinfo(src.dtype).min)
     dst = ((src.astype(np.float32) / scale) ** gamma) * scale
-    dst = np.clip(dst,0,255).astype(np.uint8)
+    dst = np.clip(dst, 0, 255).astype(np.uint8)
     return dst
+
 
 # 处理图片
 def processIMG(source):
@@ -53,52 +74,50 @@ def processIMG(source):
         if _threshold < max(g[index]):
             _threshold = max(g[index])
     _threshold = _threshold - 10
-    print("阈值： " + str(_threshold))
+    # print("阈值： " + str(_threshold))
     retval, g = cv.threshold(g, _threshold, 255, cv.THRESH_BINARY)
     return g
+
 
 # 匹配模板
 def template(templateImage, sourceImage):
     # 模板图片
     processed_tpl = processIMG(templateImage)
-    cv.imshow('templateImage', processed_tpl)
-    kernel = cv.getStructuringElement(cv.MORPH_RECT, (5, 5))
-    erosion = cv.erode(processed_tpl, kernel)  # 腐蚀
-    cv.imshow('erosion', erosion)
+    # cv.imshow('templateImage', processed_tpl)
+    kernel = cv.getStructuringElement(cv.MORPH_CROSS, (3, 3))
+    # erosion = cv.erode(processed_tpl, kernel)  # 腐蚀
+    # cv.imshow('erosion', processed_tpl)
 
     # 目标图片
     processed_target = processIMG(sourceImage)
     # 先腐蚀后膨胀叫开运算（因为先腐蚀会分开物体，这样容易记住），其作用是：分离物体，消除小区域
     opened_target = cv.morphologyEx(processed_target, cv.MORPH_OPEN, kernel)  # 开运算
-    # kernel = cv.getStructuringElement(cv.MORPH_RECT, (3, 3))
-    # dilated_target = cv.dilate(opened_target, kernel)
-    img_rgb_show = cv.resize(opened_target, (0, 0), fx=0.5, fy=0.5, interpolation=cv.INTER_NEAREST)
-    cv.imshow('open', img_rgb_show)
-    cv.waitKey(0)
+    # img_rgb_show = cv.resize(opened_target, (0, 0), fx=0.5, fy=0.5, interpolation=cv.INTER_NEAREST)
+    # cv.imshow('open', img_rgb_show)
+    # cv.waitKey(0)
 
     # 归一化相关模板匹配
     # TM_SQDIFF_NORMED: 归一化平方差匹配(平方差匹配CV_TM_SQDIFF：用两者的平方差来匹配，最好的匹配值为0)
     # TM_CCORR_NORMED:  归一化相关匹配(相关匹配CV_TM_CCORR：用两者的乘积匹配，数值越大表明匹配程度越好)
     # TM_CCOEFF_NORMED: 归一化相关系数匹配(相关系数匹配CV_TM_CCOEFF：用两者的相关系数匹配，1表示完美的匹配，-1表示最差的匹配)
-    threshold = 0.6
-    res_0 = cv.matchTemplate(opened_target, erosion, cv.TM_CCOEFF_NORMED)
-    loc = np.where(res_0 >= threshold)  # 匹配程度大于%80的坐标y,x
+    threshold = 0.875
+    res_0 = cv.matchTemplate(opened_target, processed_tpl, cv.TM_CCOEFF_NORMED)
+    loc = np.where(res_0 >= threshold)  # 匹配程度大于%87.5的坐标y,x
     results = zip(*loc[::-1])
 
     h, w = processed_tpl.shape[:2]
-    # 筛选两遍
+    # 筛选
     pointList = processPointList(list(results), w)
-    # pointList = processPointList(pointList, w)
-    print(pointList)
-
     return pointList
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     # 1.读入原图和模板
     # 模板图片 - 灰度图
-    tpl_0 = cv.imread('./imgs/0.jpg')
-    tpl_f = cv.imread('./imgs/F.jpg')
+    tpl_0 = cv.imread('./imgs/0_1.jpg')
+    tpl_d = cv.imread('./imgs/D_1.jpg')
+    tpl_e = cv.imread('./imgs/E_1.jpg')
+    tpl_f = cv.imread('./imgs/F_1.jpg')
     # 目标图片
     target = cv.imread('./imgs/source_1.jpg')
     # 显示目标图片
@@ -106,13 +125,28 @@ if __name__ == '__main__':
     cv.imshow('target', target_show)
 
     # 2.分别进行模板匹配
-    # 0 需传入灰度图
+    # 0
     point_0_list = template(tpl_0, target)
     if len(point_0_list) > 0:
         print("找到 0 ：" + str(len(point_0_list)) + "个")
-        cv.waitKey(0)
         h, w = tpl_0.shape[:2]
         for pt in point_0_list:  # *号表示可选参数
+            right_bottom = (pt[0] + w, pt[1] + h)
+            # cv.rectangle(img, (x1, y1), (x2, y2), (255, 0, 0), 2)
+            # x1, y1------
+            # |           |
+            # |           |
+            # |           |
+            #  --------x2, y2
+            cv.rectangle(target, pt, right_bottom, (0, 245, 255), 2)
+            img_rgb_show = cv.resize(target, (0, 0), fx=0.5, fy=0.5, interpolation=cv.INTER_NEAREST)
+            cv.imshow('match-result', img_rgb_show)
+    # d
+    point_d_list = template(tpl_d, target)
+    if len(point_d_list) > 0:
+        print("找到 d：" + str(len(point_d_list)) + "个")
+        h, w = tpl_d.shape[:2]
+        for pt in point_d_list:  # *号表示可选参数
             right_bottom = (pt[0] + w, pt[1] + h)
             # cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 0), 2)
             # x1, y1------
@@ -120,7 +154,23 @@ if __name__ == '__main__':
             # |           |
             # |           |
             #  --------x2, y2
-            cv.rectangle(target, pt, right_bottom, (0, 245, 255), 2)
+            cv.rectangle(target, pt, right_bottom, (245, 0, 0), 2)
+            img_rgb_show = cv.resize(target, (0, 0), fx=0.5, fy=0.5, interpolation=cv.INTER_NEAREST)
+            cv.imshow('match-result', img_rgb_show)
+    # e
+    point_e_list = template(tpl_e, target)
+    if len(point_e_list) > 0:
+        print("找到 e：" + str(len(point_e_list)) + "个")
+        h, w = tpl_e.shape[:2]
+        for pt in point_e_list:  # *号表示可选参数
+            right_bottom = (pt[0] + w, pt[1] + h)
+            # cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 0), 2)
+            # x1, y1------
+            # |           |
+            # |           |
+            # |           |
+            #  --------x2, y2
+            cv.rectangle(target, pt, right_bottom, (245, 0, 255), 2)
             img_rgb_show = cv.resize(target, (0, 0), fx=0.5, fy=0.5, interpolation=cv.INTER_NEAREST)
             cv.imshow('match-result', img_rgb_show)
     # f
@@ -136,9 +186,11 @@ if __name__ == '__main__':
             # |           |
             # |           |
             #  --------x2, y2
-            cv.rectangle(target, pt, right_bottom, (0, 245, 255), 2)
+            cv.rectangle(target, pt, right_bottom, (0, 0, 255), 2)
             img_rgb_show = cv.resize(target, (0, 0), fx=0.5, fy=0.5, interpolation=cv.INTER_NEAREST)
             cv.imshow('match-result', img_rgb_show)
+
+
 
     # img = cv.imread("./imgs/0.jpg")
     # r, g, b = cv.split(img)
