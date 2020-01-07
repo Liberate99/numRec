@@ -9,6 +9,23 @@ import cv2 as cv
 import numpy as np
 import math
 
+point_0_list = []
+point_1_list = []
+point_2_list = []
+point_3_list = []
+point_4_list = []
+point_5_list = []
+point_6_list = []
+point_7_list = []
+point_8_list = []
+point_9_list = []
+point_a_list = []
+point_b_list = []
+point_c_list = []
+point_d_list = []
+point_e_list = []
+point_f_list = []
+
 
 # 计算两点间距离
 def distanceOF2points(point1, point2):
@@ -111,10 +128,42 @@ def template(templateImage, sourceImage):
     return pointList
 
 
+# 排序数组
+def sortNumber(numberPointMap):
+    resultXArray = []
+    resultCharArray = []
+    for key in numberPointMap:
+        tem = numberPointMap[key]
+        tem.sort()
+        print(tem)
+        for point in tem:
+            j = 0
+            if len(resultXArray) == 0:
+                resultXArray.append(point[0])
+                resultCharArray.append(key)
+                j += 1
+            else:
+                while j < len(tem):
+                    if point[0] > resultXArray[j]:
+                        if j == (len(resultXArray) - 1):
+                            resultXArray.append(point[0])
+                            resultCharArray.append(key)
+                            j += 1
+                        else:
+                            j += 1
+                            continue
+                    else:
+                        resultXArray.insert(j, point[0])
+                        resultCharArray.insert(j, key)
+                    j += 1
+    return resultCharArray
+
+
 if __name__ == '__main__':
     # 1.读入原图和模板
     # 模板图片 - 灰度图
     tpl_0 = cv.imread('./imgs/0_1.jpg')
+    tpl_c = cv.imread('./imgs/C_1.jpg')
     tpl_d = cv.imread('./imgs/D_1.jpg')
     tpl_e = cv.imread('./imgs/E_1.jpg')
     tpl_f = cv.imread('./imgs/F_1.jpg')
@@ -123,6 +172,9 @@ if __name__ == '__main__':
     # 显示目标图片
     target_show = cv.resize(target, (0, 0), fx=0.25, fy=0.25, interpolation=cv.INTER_NEAREST)
     cv.imshow('target', target_show)
+
+    # 模板图片数组
+    templateImageArray = [tpl_0, tpl_c, tpl_d, tpl_e, tpl_f]
 
     # 2.分别进行模板匹配
     # 0
@@ -139,6 +191,22 @@ if __name__ == '__main__':
             # |           |
             #  --------x2, y2
             cv.rectangle(target, pt, right_bottom, (0, 245, 255), 2)
+            img_rgb_show = cv.resize(target, (0, 0), fx=0.5, fy=0.5, interpolation=cv.INTER_NEAREST)
+            cv.imshow('match-result', img_rgb_show)
+    # c
+    point_c_list = template(tpl_c, target)
+    if len(point_c_list) > 0:
+        print("找到 c：" + str(len(point_c_list)) + "个")
+        h, w = tpl_d.shape[:2]
+        for pt in point_c_list:  # *号表示可选参数
+            right_bottom = (pt[0] + w, pt[1] + h)
+            # cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 0), 2)
+            # x1, y1------
+            # |           |
+            # |           |
+            # |           |
+            #  --------x2, y2
+            cv.rectangle(target, pt, right_bottom, (0, 245, 0), 2)
             img_rgb_show = cv.resize(target, (0, 0), fx=0.5, fy=0.5, interpolation=cv.INTER_NEAREST)
             cv.imshow('match-result', img_rgb_show)
     # d
@@ -190,16 +258,9 @@ if __name__ == '__main__':
             img_rgb_show = cv.resize(target, (0, 0), fx=0.5, fy=0.5, interpolation=cv.INTER_NEAREST)
             cv.imshow('match-result', img_rgb_show)
 
+    templatePointArray = {'0': point_0_list, 'C': point_c_list, 'D': point_d_list, 'E': point_e_list, 'F': point_f_list}
 
-
-    # img = cv.imread("./imgs/0.jpg")
-    # r, g, b = cv.split(img)
-    # cv.imshow("test1", g)
-    #
-    #
-    # print(g)
-    # thre = max(g[0]) + 0
-    # print("最大值: "+str(thre))
-    # retval, g = cv.threshold(g, thre, 255, cv.THRESH_BINARY)
-    # cv.imshow("test2", g)
+    # 整理数码管数字 （8位）
+    numberPointMap = sortNumber(templatePointArray)
+    print(numberPointMap)
     cv.waitKey(0)
