@@ -9,6 +9,8 @@ import cv2 as cv
 import numpy as np
 import math
 
+from pre_treated import adjust_gamma
+
 point_0_list = []
 point_1_list = []
 point_2_list = []
@@ -71,19 +73,11 @@ def processPointList(pointList, w):
     return result_List
 
 
-# gamma变换
-def adjust_gamma(src, gamma=0.25):
-    scale = float(np.iinfo(src.dtype).max - np.iinfo(src.dtype).min)
-    dst = ((src.astype(np.float32) / scale) ** gamma) * scale
-    dst = np.clip(dst, 0, 255).astype(np.uint8)
-    return dst
-
-
 # 处理图片
 def processIMG(source):
     _threshold = 0
     # 先gamma变换
-    img_gammar = adjust_gamma(source)
+    img_gammar = adjust_gamma.adjust_gamma(source)
     # 取g通道
     r, g, b = cv.split(img_gammar)
     # 取阈值
